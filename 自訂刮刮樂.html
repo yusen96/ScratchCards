@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刮刮樂模擬器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            width: 100%;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .setup-panel {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .prize-setup {
+            margin-bottom: 16px;
+        }
+
+        .prize-input {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .prize-input input {
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+        }
+
+        .delete-prize {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .delete-prize:hover {
+            background: #dc2626;
+        }
+
+        .add-prize {
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 16px;
+        }
+
+        .add-prize:hover {
+            background: #16a34a;
+        }
+
+        .prize-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 16px;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .total-spent {
+            color: #f97316;
+        }
+
+        .profit {
+            font-weight: bold;
+        }
+
+        .profit.positive {
+            color: #22c55e;
+        }
+
+        .profit.negative {
+            color: #ef4444;
+        }
+
+        .current-number {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            min-height: 36px;
+        }
+
+        .current-number.win {
+            color: #ef4444;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .current-number.lose {
+            color: #9ca3af;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+            background: #fefce8;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .cell {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            background: #f3f4f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .cell canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            border-radius: 50%;
+        }
+
+        .button {
+            width: 100%;
+            padding: 8px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        .button:hover {
+            background: #1d4ed8;
+        }
+
+        .button.secondary {
+            background: #4b5563;
+        }
+
+        .button.secondary:hover {
+            background: #374151;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            font-size: 14px;
+        }
+
+        .info-section {
+            margin-top: 16px;
+        }
+
+        .info-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .history {
+            max-height: 256px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            margin-bottom: 4px;
+        }
+
+        .history-item.win {
+            color: #ef4444;
+        }
+
+        .history-item.lose {
+            color: #9ca3af;
+        }
+
+        .game-container {
+            display: none;
+        }
+
+        .game-container.active {
+            display: block;
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            border: 1px dashed #ccc;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .prize-image {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            animation: modalPopup 0.3s ease-out;
+        }
+
+        @keyframes modalPopup {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 16px;
+        }
+
+        .modal-content {
+            margin-bottom: 20px;
+        }
+
+        .modal-button {
+            padding: 8px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-button:hover {
+            background: #1d4ed8;
+        }
+
+        .firework {
+            position: fixed;
+            font-size: 24px;
+            animation: firework 1s ease-out forwards;
+            z-index: 1001;
+        }
+
+        @keyframes firework {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(0);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="title">刮刮樂模擬器</h2>
+        
+        <!-- 中獎彈出視窗 -->
+        <div id="winningModal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-title">🎉 恭喜中獎！！ 🎉</div>
+                <div id="modalContent" class="modal-content">
+                    <!-- 中獎內容將在這裡動態插入 -->
+                </div>
+                <button class="modal-button" onclick="closeModal()">太棒了！</button>
+            </div>
+        </div>
+ <!-- 設定面板 -->
+        <div id="setupPanel" class="setup-panel">
+            <h3 style="margin-bottom: 16px">遊戲設定</h3>
+            <div class="prize-setup">
+                <!-- 格子設定 -->
+                <div class="prize-input" style="grid-column: 1 / -1;">
+                    <label>基本設定：</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 14px;">行數:</label>
+                            <input type="number" id="gridRows" min="1" max="20" value="8" style="width: 100%;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 14px;">列數:</label>
+                            <input type="number" id="gridCols" min="1" max="20" value="10" style="width: 100%;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 14px;">每刮金額:</label>
+                            <input type="number" id="pricePerGame" min="1" value="80" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 獎項列表 -->
+                <div id="prizeList" class="prize-list">
+                    <!-- 獎項將在這裡動態添加 -->
+                </div>
+
+                <!-- 新增獎項按鈕 -->
+                <button class="add-prize" onclick="addPrize()">+ 新增獎項</button>
+            </div>
+            <button class="button" onclick="startGame()">開始遊戲</button>
+        </div>
+
+        <!-- 遊戲區域 -->
+        <div id="gameContainer" class="game-container">
+            <div class="stats">
+                <div class="total-spent">本輪總花費：NT$ <span id="totalSpent">0</span></div>
+                <div id="profitContainer" class="profit">本輪獲利：NT$ 0</div>
+            </div>
+
+            <div id="currentNumber" class="current-number"></div>
+            <div id="grid" class="grid"></div>
+            <button class="button" id="resetButton" onclick="resetGame()">開始新一輪</button>
+            <button class="button secondary" onclick="backToSetup()">返回設定</button>
+
+            <div class="info-grid">
+                <div class="info-section">
+                    <div class="info-title">中獎號碼:</div>
+                    <div id="prizeInfo"></div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-title">本輪中獎統計:</div>
+                    <div id="prizeStats"></div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-title">刮開紀錄:</div>
+                    <div id="history" class="history"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ROWS = 8;
+        let COLS = 10;
+        let TOTAL_HOLES = ROWS * COLS;
+        let PRICE_PER_GAME = 80;
+        
+        let PRIZE_RANGES = {};
+        let PRIZE_IMAGES = {};
+        let isDrawing = false;
+        let holes = Array(TOTAL_HOLES).fill(false);
+        let numbers = [];
+        let currentNumber = null;
+        let numberHistory = [];
+        let prizeCount = {};
+        let scratchCount = 0;
+        let currentRoundValue = 0;
+        let prizeCounter = 0;
+
+        function createPrizeHtml(id) {
+            return `
+                <div class="prize-input" id="prize-${id}">
+                    <button class="delete-prize" onclick="deletePrize(${id})">×</button>
+                    <label>獎項號碼：</label>
+                    <input type="number" class="prize-number" min="1" max="400" value="${id + 1}">
+                    <label>獎項名稱：</label>
+                    <input type="text" class="prize-name" value="獎項 ${id + 1}">
+                    <label>獎項金額：</label>
+                    <input type="number" class="prize-value" min="0" value="${1000 - (id * 100)}">
+                    <label>獎項圖片：</label>
+                    <input type="file" class="prize-image" accept="image/*" onchange="handleImageUpload(this, 'preview-${id}')">
+                    <div id="preview-${id}" class="image-preview"></div>
+                </div>
+            `;
+        }
+
+        function addPrize() {
+            const prizeList = document.getElementById('prizeList');
+            prizeList.insertAdjacentHTML('beforeend', createPrizeHtml(prizeCounter++));
+            updateMaxNumbers();
+        }
+
+        function deletePrize(id) {
+            const prize = document.getElementById(`prize-${id}`);
+            if (prize) {
+                prize.remove();
+                updateMaxNumbers();
+            }
+        }
+
+        // 處理圖片上傳
+        function handleImageUpload(input, previewId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.getElementById(previewId);
+                    previewDiv.style.backgroundImage = `url(${e.target.result})`;
+                    
+                    // 儲存圖片數據
+                    const prizeInputDiv = input.closest('.prize-input');
+                    const prizeNumber = prizeInputDiv.querySelector('.prize-number').value;
+                    PRIZE_IMAGES[prizeNumber] = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 更新格子數量
+        function updateGridSize() {
+            ROWS = parseInt(document.getElementById('gridRows').value) || 8;
+            COLS = parseInt(document.getElementById('gridCols').value) || 10;
+            TOTAL_HOLES = ROWS * COLS;
+            
+            updateMaxNumbers();
+        }
+
+        // 更新遊戲價格
+        function updatePricePerGame() {
+            const newPrice = parseInt(document.getElementById('pricePerGame').value) || 80;
+            PRICE_PER_GAME = newPrice;
+            // 更新按鈕文字
+            document.getElementById('resetButton').textContent = `開始新一輪 (${PRICE_PER_GAME}元/次)`;
+        }
+
+        function updateMaxNumbers() {
+            const totalHoles = ROWS * COLS;
+            document.querySelectorAll('.prize-number').forEach(input => {
+                input.max = totalHoles;
+                if (parseInt(input.value) > totalHoles) {
+                    input.value = totalHoles;
+                }
+            });
+        }
+
+        function getPrizeSettings() {
+            const prizes = {};
+            document.querySelectorAll('.prize-input').forEach(prizeEl => {
+                if (!prizeEl.querySelector('.prize-number')) return; // 跳過格子設定
+                
+                const number = prizeEl.querySelector('.prize-number').value;
+                const name = prizeEl.querySelector('.prize-name').value;
+                const value = parseInt(prizeEl.querySelector('.prize-value').value);
+                
+                prizes[number] = { name, value };
+            });
+            return prizes;
+        }
+
+        function createFirework() {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.textContent = '🎉';
+            firework.style.left = Math.random() * window.innerWidth + 'px';
+            firework.style.top = (window.innerHeight - 50) + 'px';
+            document.body.appendChild(firework);
+            
+            setTimeout(() => {
+                firework.remove();
+            }, 1000);
+        }
+
+        function showWinningModal(prize, value, imageUrl) {
+            const modalContent = document.getElementById('modalContent');
+            let html = `
+                <h3>${prize}</h3>
+                <p style="font-size: 20px; margin: 10px 0;">價值 NT$ ${value.toLocaleString()}</p>
+            `;
+            
+            if (imageUrl) {
+                html += `<img src="${imageUrl}" class="prize-image" alt="${prize}">`;
+            }
+            
+            modalContent.innerHTML = html;
+            document.getElementById('winningModal').style.display = 'flex';
+            
+            // 創建多個煙火效果
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    createFirework();
+                }, i * 200);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('winningModal').style.display = 'none';
+        }
+
+        function updatePrizeRanges() {
+            PRIZE_RANGES = getPrizeSettings();
+
+            // 更新獎項資訊顯示
+            const prizeInfoEl = document.getElementById('prizeInfo');
+            let html = '';
+            
+            const colors = ['#ef4444', '#9333ea', '#2563eb', '#16a34a', '#eab308'];
+            Object.entries(PRIZE_RANGES).forEach(([number, info], index) => {
+                const color = colors[index % colors.length];
+                html += `<div style="color: ${color}">${number}號: ${info.name} (NT$ ${info.value.toLocaleString()})</div>`;
+            });
+            
+            html += `<div style="color: #9ca3af">其他號碼: 銘謝惠顧</div>`;
+            prizeInfoEl.innerHTML = html;
+        }
+
+        function startGame() {
+            if (Object.keys(getPrizeSettings()).length === 0) {
+                alert('請至少新增一個獎項！');
+                return;
+            }
+            updateGridSize();
+            updatePricePerGame();
+            updatePrizeRanges();
+            document.getElementById('setupPanel').style.display = 'none';
+            document.getElementById('gameContainer').classList.add('active');
+            resetGame();
+        }
+
+        function backToSetup() {
+            document.getElementById('setupPanel').style.display = 'block';
+            document.getElementById('gameContainer').classList.remove('active');
+        }
+
+        function getNumberInfo(number) {
+            const numberStr = number.toString();
+            if (PRIZE_RANGES[numberStr]) {
+                return {
+                    text: PRIZE_RANGES[numberStr].name,
+                    value: PRIZE_RANGES[numberStr].value
+                };
+            }
+            return { text: "銘謝惠顧", value: 0 };
+        }
+
+        function calculateProfit() {
+            return currentRoundValue - (scratchCount * PRICE_PER_GAME);
+        }
+
+        function updateStats() {
+            const totalSpentEl = document.getElementById('totalSpent');
+            const profitContainerEl = document.getElementById('profitContainer');
+            const profit = calculateProfit();
+            
+            totalSpentEl.textContent = (scratchCount * PRICE_PER_GAME).toLocaleString();
+            profitContainerEl.textContent = `本輪${profit >= 0 ? '獲利' : '虧損'}：NT$ ${Math.abs(profit).toLocaleString()}`;
+            profitContainerEl.className = `profit ${profit >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        function updatePrizeStats() {
+            const prizeStatsEl = document.getElementById('prizeStats');
+            let html = '';
+            
+            Object.entries(prizeCount).forEach(([prize, count]) => {
+                const isSpecialPrize = prize !== "銘謝惠顧";
+                let prizeValue = 0;
+                let className = "prize-other";
+
+                if (isSpecialPrize) {
+                    Object.entries(PRIZE_RANGES).forEach(([number, info], index) => {
+                        if (info.name === prize) {
+                            prizeValue = info.value;
+                            className = `prize-${index}`;
+                        }
+                    });
+                }
+                
+                html += `<div class="${className}">
+                    ${prize}: ${count}個
+                    ${isSpecialPrize ? ` (價值 NT$ ${(prizeValue * count).toLocaleString()})` : ''}
+                </div>`;
+            });
+
+            html += `
+                <div style="margin-top: 16px">
+                    <div class="total-spent">已刮 ${scratchCount} 次</div>
+                    <div class="total-spent">總花費 NT$ ${(scratchCount * PRICE_PER_GAME).toLocaleString()}</div>
+                    <div class="profit ${calculateProfit() >= 0 ? 'positive' : 'negative'}">
+                        ${calculateProfit() >= 0 ? '目前大賺' : '目前虧損'} NT$ ${Math.abs(calculateProfit()).toLocaleString()}
+                    </div>
+                </div>
+            `;
+
+            prizeStatsEl.innerHTML = html;
+        }
+
+        function updateHistory() {
+            const historyEl = document.getElementById('history');
+            let html = '';
+            
+            numberHistory.forEach((number, index) => {
+                const prizeInfo = getNumberInfo(number);
+                const isWin = PRIZE_RANGES[number];
+                
+                html += `<div class="history-item ${isWin ? 'win' : 'lose'}">
+                    第${index + 1}次: ${number}號 
+                    ${isWin ? ` 🎉 ${prizeInfo.text} (NT$ ${prizeInfo.value.toLocaleString()}) 🎉` : ' (銘謝惠顧)'}
+                </div>`;
+            });
+            
+            historyEl.innerHTML = html;
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        function revealNumber(index) {
+            if (holes[index]) return;
+            
+            holes[index] = true;
+            const number = numbers[index];
+            currentNumber = number;
+            numberHistory.push(number);
+            
+            const prizeInfo = getNumberInfo(number);
+            prizeCount[prizeInfo.text] = (prizeCount[prizeInfo.text] || 0) + 1;
+
+            if (PRIZE_RANGES[number]) {
+                currentRoundValue += prizeInfo.value;
+                // 顯示中獎彈出視窗
+                showWinningModal(prizeInfo.text, prizeInfo.value, PRIZE_IMAGES[number]);
+            }
+
+            const currentNumberEl = document.getElementById('currentNumber');
+            if (PRIZE_RANGES[number]) {
+                currentNumberEl.textContent = `中獎號碼：${number}`;
+                currentNumberEl.className = 'current-number win';
+            } else {
+                currentNumberEl.textContent = prizeInfo.text;
+                currentNumberEl.className = 'current-number lose';
+            }
+
+            updateStats();
+            updatePrizeStats();
+            updateHistory();
+        }
+
+        function createScratchableCell(index) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerHTML = `<span>${numbers[index]}</span>`;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 48;
+            canvas.height = 48;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#CCCCCC';
+            ctx.fillRect(0, 0, 48, 48);
+            
+            let hasStartedScratching = false;
+
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                let x, y;
+                
+                if (e.type.startsWith('touch')) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    x = touch.clientX - rect.left;
+                    y = touch.clientY - rect.top;
+                } else {
+                    x = e.clientX - rect.left;
+                    y = e.clientY - rect.top;
+                }
+
+                if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;
+                
+                ctx.globalCompositeOperation = 'destination-out';
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        if (i === 0 && j === 0) continue;
+                        ctx.beginPath();
+                        ctx.arc(x + i * 3, y + j * 3, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                checkScratch();
+            }
+
+            function checkScratch() {
+                const imageData = ctx.getImageData(0, 0, 48, 48);
+                const pixels = imageData.data;
+                let transparent = 0;
+                
+                for (let i = 0; i < pixels.length; i += 4) {
+                    if (pixels[i + 3] === 0) transparent++;
+                }
+                
+                const percentage = (transparent / (48 * 48)) * 100;
+                
+                if (!hasStartedScratching && percentage > 1) {
+                    hasStartedScratching = true;
+                    scratchCount++;
+                    updateStats();
+                    updatePrizeStats();
+                }
+                
+                if (percentage > 70) {
+                    canvas.remove();
+                    revealNumber(index);
+                }
+            }
+
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            
+            cell.appendChild(canvas);
+            return cell;
+        }
+
+        function createGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+            
+            for (let i = 0; i < TOTAL_HOLES; i++) {
+                gridEl.appendChild(createScratchableCell(i));
+            }
+        }
+
+        function resetGame() {
+            holes = Array(TOTAL_HOLES).fill(false);
+            initializeNumbers();
+            currentNumber = null;
+            numberHistory = [];
+            prizeCount = {};
+            scratchCount = 0;
+            currentRoundValue = 0;
+            
+            document.getElementById('currentNumber').textContent = '';
+            document.getElementById('currentNumber').className = 'current-number';
+            
+            updateStats();
+            updatePrizeStats();
+            updateHistory();
+            createGrid();
+
+            // 更新按鈕文字
+            document.getElementById('resetButton').textContent = `開始新一輪 (${PRICE_PER_GAME}元/次)`;
+        }
+
+        function initializeNumbers() {
+            const availableNumbers = Array.from({length: TOTAL_HOLES}, (_, i) => i + 1);
+            numbers = Array(TOTAL_HOLES).fill(0);
+            
+            for (let i = 0; i < TOTAL_HOLES; i++) {
+                const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+                numbers[i] = availableNumbers.splice(randomIndex, 1)[0];
+            }
+        }
+
+        // 初始化事件監聽器
+        function initializeEventListeners() {
+            document.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { // 左鍵點擊
+                    isDrawing = true;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+
+            document.addEventListener('mouseleave', () => {
+                isDrawing = false;
+            });
+
+            // 移動設備觸摸事件
+            document.addEventListener('touchstart', (e) => {
+                isDrawing = true;
+            }, { passive: false });
+
+            document.addEventListener('touchend', () => {
+                isDrawing = false;
+            });
+
+            document.addEventListener('touchcancel', () => {
+                isDrawing = false;
+            });
+
+            // 防止移動設備上的滾動
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.tagName === 'CANVAS') {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            // 監聽價格變更
+            document.getElementById('pricePerGame').addEventListener('change', updatePricePerGame);
+        }
+
+        // 初始化遊戲
+        function initializeGame() {
+            initializeEventListeners();
+            addPrize(); // 添加第一個獎項
+            addPrize(); // 添加第二個獎項
+            updatePricePerGame(); // 初始化價格顯示
+            updatePrizeRanges();
+        }
+
+        // 當頁面加載完成時啟動遊戲
+        window.addEventListener('load', initializeGame);
+    </script>
+</body>
+</html>
